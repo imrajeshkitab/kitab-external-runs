@@ -141,7 +141,7 @@ speakable checks' thresholds. Keep those changes inside the adapters, `engine.cl
 | `extruns/api.py` | FastAPI: people's API, runner API, UI, in-house worker loop | new endpoints |
 | `runner/kitab_runner.py` | external runner, stdlib only: one lane per external stage, heartbeats, retries | runner behaviour |
 | `web/index.html` | the UI: Runs board, card detail, New run, Narratable text, Who runs each stage | UI |
-| `tests/test_pipeline.py` | 16 tests covering the rules above | always |
+| `tests/test_pipeline.py` | 17 tests covering the rules above | always |
 | `dryrun/run_dry.py` | real 8-language summaries through every stage, read-only, throwaway DB | checking stage 1 on real data |
 | `fixtures/test_summaries.json` | offline copy of TEST-0001/0002 (same rows as in the Studio DB) | |
 
@@ -168,7 +168,7 @@ Python 3.10+ (tested on 3.10 and 3.13).
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn extruns.api:app --port 8790          # server + UI, http://localhost:8790
 .venv/bin/python runner/kitab_runner.py                # runner (stand-in adapters by default)
-.venv/bin/python -m pytest -q                          # 16 tests
+.venv/bin/python -m pytest -q                          # 17 tests
 ```
 
 Test books: **TEST-0001** (8 languages, passes stage 1) and **TEST-0002** (Marathi, Telugu, blocked on purpose).
