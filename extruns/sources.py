@@ -12,14 +12,25 @@ import urllib.request
 from pathlib import Path
 
 from .config import ROOT
+from .parsing import split_sections
 
 
 class FixtureSource:
+    """Every *.json in fixtures/ (or one file). Rows may be in the feed's shape (with "sections") or exactly as
+    stored in the content table (with "final_summary"), like fixtures/test_summaries.json."""
+
     def __init__(self, path: Path | None = None):
-        self.path = path or ROOT / "fixtures" / "summaries.json"
+        self.paths = [path] if path else sorted((ROOT / "fixtures").glob("*.json"))
 
     def _all(self) -> list[dict]:
-        return json.loads(self.path.read_text(encoding="utf-8"))
+        rows = []
+        for p in self.paths:
+            for s in json.loads(p.read_text(encoding="utf-8")):
+                if "sections" not in s:
+                    other = s["language"] not in ("english", "hindi")
+                    s = {**s, "sections": [x.to_dict() for x in split_sections(s.get("final_summary") or "", other)]}
+                rows.append(s)
+        return rows
 
     def books(self, language: str) -> list[dict]:
         return [{"linear_id": s["linear_id"], "language": s["language"], "title": s["title"]}

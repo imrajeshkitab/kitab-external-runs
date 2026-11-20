@@ -159,3 +159,53 @@ def test_api_board_and_runner_endpoints():
     board = c.get("/api/board").json()
     assert [b["id"] for b in board["columns"]["speakable"]] == [bid]
     assert c.get(f"/api/books/{bid}").json()["events"][-1]["kind"] == "finished"
+
+
+def test_http_endpoint_adapter_end_to_end(monkeypatch):
+    """The HTTP adapter against two tiny local services, on a real test summary (TEST-0001, Tamil)."""
+    import base64, http.server, threading
+    from extruns.adapters import http_endpoints
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            if self.path == "/normalise":
+                out = stub.normalise({"language": body["language"], "narratable": {"chapters": body["chapters"]}})
+            else:
+                res = stub.synthesise({"speakable": {"chapters": body["chapters"]}}, config.STORAGE / "svc")
+                out = {"audio_base64": base64.b64encode(Path(res["audio_path"]).read_bytes()).decode(),
+                       "ext": "wav", "report": res["report"]}
+            data = json.dumps(out).encode()
+            self.send_response(200); self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_address[1]}"
+    monkeypatch.setenv("NORMALISE_URL", base + "/normalise")
+    monkeypatch.setenv("SYNTHESISE_URL", base + "/synthesise")
+    bid = engine.add([{"linear_id": "TEST-0001", "language": "tamil", "title": "test"}], "audio", "test")[0]
+    engine.work_inhouse(FixtureSource(), stub)
+    b = engine.claim("speakable", "w", "external")
+    assert engine.finish(bid, "speakable", "w", "external", http_endpoints.normalise(b))["failed"] is False
+    b = engine.claim("audio", "w", "external")
+    out = http_endpoints.synthesise(b, config.STORAGE / "tmp")
+    engine.store_audio(bid, "w", Path(out["audio_path"]).read_bytes(), out["ext"])
+    assert engine.finish(bid, "audio", "w", "external", {"report": out["report"]})["failed"] is False
+    assert engine.book(bid)["stage"] == "delivered"
+    srv.shutdown()
+
+
+def test_test_summaries_cover_all_columns_and_languages():
+    rows = json.loads((ROOT / "fixtures" / "test_summaries.json").read_text())
+    langs = {r["language"] for r in rows if r["linear_id"] == "TEST-0001"}
+    assert langs == {"bengali", "gujarati", "kannada", "malayalam", "marathi", "odia", "tamil", "telugu"}
+    for col in ("id", "linear_id", "language", "title", "author", "category", "final_summary", "is_ready", "speakable_text"):
+        assert all(col in r for r in rows)
+    for lang in langs:
+        narratable.build(FixtureSource().get("TEST-0001", lang))          # every language passes stage 1
+    with pytest.raises(narratable.Blocked):
+        narratable.build(FixtureSource().get("TEST-0002", "marathi"))     # blocked on purpose

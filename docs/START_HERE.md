@@ -1,30 +1,70 @@
-# Kitab External Runs: guide for the external side
+# Kitab External Runs: start here
 
-This guide is for whoever runs the external stages: a person, a script, or an AI assistant working from the API.
-You don't need the web UI. Everything here works with plain HTTP and JSON.
+One guide for running the external stages: set up the repo on your machine, see how a book flows, and plug in your
+speakable-text step and your audio step, as Python functions or as HTTP endpoints. Nothing is hosted: you pull the
+repo and run the server, the UI and the runner yourself.
 
-## 1. What you do and what we do
+## 1. Set up and run (10 minutes)
 
-A **book** means one book in one language. Every book goes through the same stages:
+```bash
+git clone git@github.com:imrajeshkitab/kitab-external-runs.git && cd kitab-external-runs
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
+.venv/bin/uvicorn extruns.api:app --port 8790        # 1) server + UI → http://localhost:8790
+.venv/bin/python runner/kitab_runner.py              # 2) runner, in a second terminal (stand-in steps for now)
+.venv/bin/python -m pytest -q                        # 3) tests (should all pass)
 ```
-Queued → 1 Narratable text → 2 Speakable text → 3 Audio → Audio delivered
-          (Kitab, in-house)   (you, external)    (you, external)
+
+Then in the UI: **New run** → language → tick **[TEST] …** (TEST-0001) → *Until audio* → **Add**. Watch the book move
+across **Runs**: stage 1 runs on the server, stages 2–3 in the runner. Open the card to see the stage thread,
+the narratable text, the speakable text and the audio.
+
+### Test summaries
+
+`fixtures/test_summaries.json` holds test books in exactly the shape of our summaries table (every column: id,
+linear_id, language, title, author, category, final_summary, summary_chapters, is_ready, speakable_* …). They are
+copies of real summaries, marked `[TEST]`, `source: "test"`:
+
+| Book | Languages | Why it's there |
+|---|---|---|
+| TEST-0001 | bengali, gujarati, kannada, malayalam, marathi, odia, tamil, telugu | passes stage 1 in all 8 languages: use it for every dry run |
+| TEST-0002 | marathi, telugu | its intro has no heading (no tagline), so stage 1 blocks it on purpose: shows what a blocked book looks like |
+
+To use our real summaries instead, set `KITAB_CONTENT_API` and `KITAB_CONTENT_API_KEY` (your existing key) before
+starting the server.
+
+## 2. How a book flows
+
+```mermaid
+flowchart LR
+    Q([Queued]) --> N["1 · Narratable text<br/>Kitab, on the server<br/>SOP lines + standard headings"]
+    N -->|until narratable| S1[[stopped]]
+    N --> SP["2 · Speakable text<br/><b>your normalise()</b><br/>one book at a time"]
+    SP --> C1{Kitab checks<br/>speakable text}
+    C1 -->|fail| F1[[failed, with reason]]
+    C1 -->|until speakable| S2[[stopped]]
+    C1 --> W[/waiting spot: 1 book/]
+    W --> A["3 · Audio<br/><b>your synthesise()</b><br/>one book at a time"]
+    A --> U[upload audio + report]
+    U --> D([Audio delivered])
+    S1 -. continue .-> SP
+    S2 -. continue .-> W
 ```
 
-| Stage | Input | Output | Who today |
+| Step | Who | In | Out |
 |---|---|---|---|
-| 1 · Narratable text | the summary as written | the same words in the narration format: spoken lines from the Kitab SOP, standard headings | Kitab |
-| 2 · Speakable text | narratable text | the same text with numbers, symbols and emojis written as words | **you** |
-| 3 · Audio | speakable text + narrator + reference clip | one audio file for the whole book + a report | **you** |
+| Queue | anyone, in the UI or the API | books + how far to go (until narratable, speakable or audio) | books in Queued |
+| 1 · Narratable text | Kitab code, runs inside the server | the summary as written | chapters with SOP spoken lines and standard headings; fixes logged; blocked books get a reason |
+| 2 · Speakable text | **you**: `normalise(job)` | narratable chapters | the same chapters with numbers, symbols and emojis as words |
+| Kitab checks | server, on arrival | your speakable chapters | pass, or *failed* with plain reasons (section 6) |
+| 3 · Audio | **you**: `synthesise(job, out_dir)` | speakable chapters (+ narrator and clip) | one audio file + report (duration, model, chapter times) |
+| Delivered | server | the upload | saved as `external/bala/<book>/<language>/attempt-<n>/…` |
 
-You never get the raw summary. You get narratable text, already in the right format. Keep the format; only make it
-speakable.
+A stopped book goes on with **Continue** (its card, a whole column, or a selection). Who runs each stage is a
+setting (**Who runs each stage** in the UI): today stage 1 is Kitab's and 2–3 are yours, and if that changes,
+nothing in your code changes.
 
-Who runs each stage is a setting on Kitab's side. If Kitab moves a stage to you or back, the API below doesn't
-change: you only ever receive work for stages that are yours.
-
-## 2. The rules the system enforces
+## 3. Rules the system enforces
 
 - **One book at a time per stage.** You can have one book in speakable text and one in audio at the same time,
   never two in the same stage.
@@ -39,39 +79,78 @@ change: you only ever receive work for stages that are yours.
 - **Kitab checks everything you send back.** If a check fails, the book shows *Failed* with the reason, and Kitab
   decides whether to run the stage again. Section 6 lists the checks.
 
-## 3. Two ways to work
 
-**A. Use the runner (recommended).** `runner/kitab_runner.py` already does claim, heartbeat, upload, finish and
-retries. You write two Python functions:
+## 4. Where you plug in your two steps
 
-```python
-# my_adapters.py
-def normalise(job):                 # stage 2
-    """job["narratable"]["chapters"] -> the same chapters as speakable text."""
-    return {"chapters": [{"index": c["index"], "kind": c["kind"],
-                          "heading": speak(c["heading"]), "text": speak(c["text"])}
-                         for c in job["narratable"]["chapters"]]}
+You write only the two steps. Pick one way:
 
-def synthesise(job, out_dir):       # stage 3
-    """job["speakable"]["chapters"] -> one audio file in out_dir, plus a report."""
-    ...
-    return {"audio_path": str(out_dir / "book.mp3"), "ext": "mp3",
-            "report": {"duration_s": 1262.4, "model": "your-model v1",
-                       "chapters": [{"index": 0, "start_s": 0.0, "end_s": 182.5}, ...]}}
-```
+**A. Python functions:** copy `extruns/adapters/my_adapters_template.py` to `extruns/adapters/my_adapters.py`, fill
+in the two TODOs, then:
 
 ```bash
-KITAB_RUNS_URL=https://<server> EXTRUNS_RUNNER_KEY=<your key> python runner/kitab_runner.py --adapters my_adapters
+.venv/bin/python runner/kitab_runner.py --adapters extruns.adapters.my_adapters
 ```
 
-**B. Call the API yourself** (your own scheduler, or an AI assistant driving it). Use the loop in section 7.
+```python
+def normalise(job):            # job["narratable"]["chapters"] -> {"chapters": [...same chapters, speakable...]}
+def synthesise(job, out_dir):  # job["speakable"]["chapters"]  -> {"audio_path", "ext", "report": {...}}
+```
 
-## 4. Connecting
+**B. Your own HTTP endpoints** (if your normaliser and model already run as services): no code to write.
+
+```bash
+NORMALISE_URL=http://localhost:9001/normalise SYNTHESISE_URL=http://localhost:9002/synthesise \
+.venv/bin/python runner/kitab_runner.py --adapters extruns.adapters.http_endpoints
+```
+
+| Your endpoint | Receives (POST JSON) | Returns |
+|---|---|---|
+| normalise | `{"book_id", "linear_id", "language", "chapters": [{"index","kind","heading","text"}]}` | `{"chapters": [...same shape...], "normaliser": "name v1"}` |
+| synthesise | `{"book_id", "linear_id", "language", "attempt", "chapters": [...speakable...]}` | `{"audio_base64": "...", "ext": "mp3", "report": {...}}` or `{"audio_path": "/local/file", "ext", "report"}` |
+
+The report: `{"duration_s": 1262.4, "model": "name v1", "chapters": [{"index": 0, "start_s": 0.0, "end_s": 182.5}, …], "sentences": [optional]}`.
+
+**C. No runner at all:** drive the API from your own scheduler or an AI assistant (sections 8–9).
+
+Whichever you pick, the runner (or you) never chooses books or stages: the server hands out only what is allowed.
+
+## 5. A dry run, step by step
+
+1. Start the server and the runner with your adapters (A or B).
+2. **New run** → *marathi* → TEST-0001 → *Until speakable* → Add. Your normaliser runs once; the card shows
+   *Stopped here, as asked* and **Open** shows your speakable text, or *Failed* with the exact check that failed.
+3. Fix anything the checks flag, then **Run this stage again** on the card.
+4. **Continue to audio** on the card: your model runs once, the audio appears on the card with its saved name.
+5. Repeat for the other 7 languages (select several cards, **Continue each to its next stage**).
+
+## 6. What Kitab checks
+
+**Speakable text (stage 2)**, checked as soon as you finish:
+
+| Check | Fails with |
+|---|---|
+| Same number of chapters as the narratable text | "Speakable text has N chapters; the narratable text has M." |
+| Same kind in the same place (intro, key_idea, conclusion) | "Chapter 3 is key_idea but should be conclusion." |
+| Every chapter keeps a heading | "Chapter 3 lost its heading." |
+| Every chapter has text | "Chapter 3 has no text." |
+| Nothing a voice can't say: no ASCII digits, `# @ % & * _ = + < > [ ] { } \| \ / ~ ^ $ € £ ₹`, no links | "Chapter 2 still has '%', which a voice can't say." |
+| At least 95% of letters in the language's own script | "Only 91.2% of the letters are in the tamil script (needs 95%)." |
+| Length within 70–140% of the narratable chapter (chapters of 300+ characters) | "Chapter 4 is 62% the length of the narratable text…" |
+
+So: keep every chapter and heading, in order. Turn **all** numbers into words, headings included ("मुख्य कल्पना 5
+पैकी 1" → "मुख्य कल्पना पाच पैकी एक"). Write English words inside the text in the language's own script. Don't
+summarise, add or drop sentences.
+
+**Audio (stage 3)**: the audio file must be uploaded, the report needs `duration_s`, and `chapters`, when sent,
+must have one entry per chapter. Fuller audio checks (silence, loudness, cut-off endings) and listening come later.
+
+
+## 7. Connecting to the server
 
 | | |
 |---|---|
-| Base URL | given by Kitab (local development: `http://localhost:8790`) |
-| Auth | header `X-Runner-Key: <your key>` on every `/api/runner/...` call |
+| Base URL | `http://localhost:8790`: the server you started in section 1 |
+| Auth | header `X-Runner-Key` on every `/api/runner/...` call: `dev-runner-key` locally, or whatever you set in `EXTRUNS_RUNNER_KEY` for both server and runner |
 | Format | JSON in and out, except the audio upload (raw bytes) |
 | Your worker name | any stable string per process, e.g. `gpu-box-1`; send the same one on every call for a book |
 
@@ -84,7 +163,8 @@ Errors come back as HTTP status codes with `{"detail": "<plain sentence>"}`:
 | 422 | malformed request | fix the body |
 | 5xx | server problem | retry after a few seconds |
 
-## 5. Endpoints for the external side
+
+## 8. API reference (for scripts and AI assistants)
 
 ### Claim the next book for a stage
 
@@ -139,7 +219,7 @@ Reply: `{"failed": false, "reasons": []}`, or `{"failed": true, "reasons": ["Cha
 
 `POST /api/runner/{id}/audio?worker=gpu-box-1&ext=mp3` with the file's raw bytes as the body
 (`Content-Type: application/octet-stream`). Any format is fine; `ext` says which. Kitab names and stores the file
-(section 8). Reply: `{"path": "external/…"}`.
+(section 10). Reply: `{"path": "external/…"}`.
 
 ### Finish stage 3
 
@@ -162,28 +242,8 @@ Required: `duration_s` (seconds) and `model`. `chapters` is strongly wanted, one
 `POST /api/runner/{id}/fail` with `{"stage": "audio", "worker": "gpu-box-1", "reason": "model crashed on chapter 5"}`.
 The book shows *Failed* with your reason, and Kitab decides what happens next.
 
-## 6. What Kitab checks
 
-**Speakable text (stage 2)**, checked as soon as you finish:
-
-| Check | Fails with |
-|---|---|
-| Same number of chapters as the narratable text | "Speakable text has N chapters; the narratable text has M." |
-| Same kind in the same place (intro, key_idea, conclusion) | "Chapter 3 is key_idea but should be conclusion." |
-| Every chapter keeps a heading | "Chapter 3 lost its heading." |
-| Every chapter has text | "Chapter 3 has no text." |
-| Nothing a voice can't say: no ASCII digits, `# @ % & * _ = + < > [ ] { } \| \ / ~ ^ $ € £ ₹`, no links | "Chapter 2 still has '%', which a voice can't say." |
-| At least 95% of letters in the language's own script | "Only 91.2% of the letters are in the tamil script (needs 95%)." |
-| Length within 70–140% of the narratable chapter (chapters of 300+ characters) | "Chapter 4 is 62% the length of the narratable text…" |
-
-So: keep every chapter and heading, in order. Turn **all** numbers into words, headings included ("मुख्य कल्पना 5
-पैकी 1" → "मुख्य कल्पना पाच पैकी एक"). Write English words inside the text in the language's own script. Don't
-summarise, add or drop sentences.
-
-**Audio (stage 3)**: the audio file must be uploaded, the report needs `duration_s`, and `chapters`, when sent,
-must have one entry per chapter. Fuller audio checks (silence, loudness, cut-off endings) and listening come later.
-
-## 7. The loop (for your own scheduler or an AI assistant)
+## 9. The loop, if you call the API yourself
 
 Run one loop per stage you own, side by side. Each loop holds at most one book.
 
@@ -220,7 +280,8 @@ curl -s $BASE/api/runner/18/finish -H "X-Runner-Key: $KEY" -H "Content-Type: app
      -d '{"stage":"audio","worker":"gpu-box-1","result":{"report":{"duration_s":1262.4,"model":"v1"}}}'
 ```
 
-## 8. File naming (done by Kitab)
+
+## 10. File naming (done for you)
 
 You upload bytes; Kitab saves them as:
 
@@ -232,21 +293,23 @@ external/<provider>/<linear_id>/<language>/attempt-<n>/<linear_id>_<language>_<p
 For example `external/bala/SUM-199/marathi/attempt-1/SUM-199_marathi_bala_a1.mp3`. A redo is a new attempt
 number, so earlier files are never overwritten.
 
-## 9. For an AI assistant working from this guide
+
+## 11. For an AI assistant working from this guide
 
 If you are an AI assistant asked to run the external stages:
 
 1. Ask the person for the base URL and the runner key. Never print or store the key anywhere but an environment
    variable.
-2. Prefer running `runner/kitab_runner.py` with an adapters module wrapping their normaliser and model (section 3A).
+2. Prefer running `runner/kitab_runner.py` with an adapters module wrapping their normaliser and model (section 4, option A).
    Write the two functions; don't change the runner.
-3. If you call the API directly, follow section 7 exactly: one book per stage at a time, a heartbeat every 60 s,
+3. If you call the API directly, follow section 9 exactly: one book per stage at a time, a heartbeat every 60 s,
    audio uploaded before finish, `fail` with a reason on any error.
 4. Before sending speakable text, check it against section 6 yourself: same chapters and headings, no ASCII digits
    or symbols, the right script. Fix and resend nothing after `finish`: a failed book waits for Kitab.
 5. Never claim a stage that isn't yours, never invent text, and never edit headings beyond writing numbers as words.
 
-## 10. People's side of the API (for reference)
+
+## 12. Our side of the API (queue, continue, run until)
 
 These are what the web UI uses; the external side doesn't need them.
 
