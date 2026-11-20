@@ -18,6 +18,10 @@ cp .env.example .env          # then fill in SUPABASE_SERVICE_KEY (shared with y
 .venv/bin/python -m pytest -q                        # 3) tests (should all pass)
 ```
 
+There is no login: anyone who can open `http://localhost:8790` can use the UI. By default it only listens on this
+machine; to let others on the same network open it, start the server with `--host 0.0.0.0` (only on a trusted
+network, since nothing asks who you are). Only the runner's calls need a key (`EXTRUNS_RUNNER_KEY`).
+
 Everything runs on your machine. The server reads summaries, narrators and reference clips **directly from
 Kitab's Studio Supabase** over HTTPS (the settings in `.env`); no hosted Kitab service (Vercel or other) is
 involved, and audio never leaves your machine except where you send it. Without a `.env` the server still runs,
