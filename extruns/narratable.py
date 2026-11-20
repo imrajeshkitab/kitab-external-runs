@@ -37,6 +37,8 @@ def build(summary: dict) -> dict:
     warnings: list[str] = []
 
     kinds = [s.get("kind") for s in sections]
+    if sections and kinds[0] == "preamble":
+        raise Blocked("The intro has no heading, so there is no tagline. A tagline must be written (or generated) first.")
     if not sections or kinds[0] != "intro":
         raise Blocked("The summary has no intro section.")
     if kinds[-1] != "conclusion":
@@ -51,6 +53,9 @@ def build(summary: dict) -> dict:
 
     key_ideas = [s for s in sections if s["kind"] == "key_idea"]
     total = len(key_ideas)
+    said = {s.get("key_idea_total") for s in key_ideas} - {None}
+    if said and max(said) > total:
+        raise Blocked(f"The headings say {max(said)} key ideas but only {total} are there: a key idea is missing.")
     for n, s in enumerate(key_ideas, 1):
         if s.get("key_idea") not in (None, n) or s.get("key_idea_total") not in (None, total):
             fixes.append({"chapter": s.get("index"), "what": "numbering",

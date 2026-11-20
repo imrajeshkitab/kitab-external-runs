@@ -25,6 +25,8 @@ Design: [pipeline design](https://claude.ai/artifact/VkNcH8tBZW1x1daFympQ5b) ·
 [runner proposal](https://claude.ai/artifact/AbuiDZ5Z7CfzeZwHsZLMJE) ·
 [screens](https://claude.ai/artifact/T7fcP6nbL28EmDtEyiL936).
 
+**For the external side:** [docs/external-guide.md](docs/external-guide.md) (API-first; works without the UI).
+
 ## Run it locally
 
 ```bash
@@ -59,6 +61,13 @@ def synthesise(job, out_dir):  # job["speakable"]["chapters"] -> one audio file 
 ```
 
 `extruns/adapters/stub.py` is the stand-in: it spells numbers in the script's own digits and writes silence.
+
+## Dry run on real summaries
+
+`dryrun/run_dry.py` reads the 52 eight-language summaries from the Studio content table (read-only), runs stage 1
+for real and stages 2–3 with the stand-ins, in a throwaway database. Result on 2026-11-20: 28 reached audio
+delivered; 24 were blocked in stage 1 with a reason: 19 have no intro heading, so no tagline (4 books × their
+languages), and 5 say "8 key ideas" but have 7 (one book in 5 languages).
 
 ## Layout
 

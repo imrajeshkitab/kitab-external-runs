@@ -3,3 +3,4 @@ __pycache__/
 storage/
 .env
 *.sqlite3
+dryrun/*.json
