@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kitab External Runs</title>
+<style>
+:root{--bg:#F5F6F3;--card:#fff;--ink:#17201D;--quiet:#5A6662;--line:#DDE2DF;--teal:#2F7D6B;--done:#2F5BD8;--now:#39FF88;--red:#B23A2E;--amber:#E0A526;--side:#17201D}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,sans-serif}
+.app{display:flex;flex-wrap:wrap;min-height:100vh}
+nav{flex:1 1 220px;max-width:240px;background:var(--side);color:#E7ECEA;padding:24px 14px;display:flex;flex-direction:column;gap:4px}
+nav .brand{margin:0 0 4px 10px;font-weight:700;font-size:16px}
+nav .sub{margin:0 0 18px 10px;font-size:12px;color:#8A9792}
+nav .group{margin:16px 0 4px 10px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#8A9792}
+nav button{all:unset;cursor:pointer;color:#B9C4C0;padding:9px 10px;border-radius:8px}
+nav button[aria-current="page"]{background:var(--teal);color:#fff;font-weight:600}
+nav button:focus-visible{outline:2px solid var(--now)}
+main{flex:999 1 560px;min-width:0;padding:28px 32px;display:flex;flex-direction:column;gap:16px}
+h1{margin:0;font-size:26px}
+.lede{margin:0;color:#3D4844;max-width:780px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
+.btn.go{background:var(--now);border-color:var(--now);color:#0F1714;font-weight:700}
+.btn.danger{color:#8E2A20;border-color:#E9C3BD}
+.btn:disabled{opacity:.45;cursor:default}
+select,input[type=search]{font:inherit;font-size:13px;padding:7px 8px;border-radius:8px;border:1px solid var(--line);background:#fff}
+.now{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:6px}
+.pill{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
+.pill.red{background:#F8E3E0;color:#8E2A20}.pill.amber{background:#F3ECDC;color:#7A5200}.pill.info{background:#E6EAF5;color:#2D4485}
+.bulk{position:sticky;top:0;z-index:3;background:var(--side);color:#fff;border-radius:12px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.bulk[hidden]{display:none}
+.bulk .lnk{all:unset;cursor:pointer;color:#9FE3CF;text-decoration:underline}
+.bulk select{border:0}
+.board{overflow-x:auto;padding-bottom:8px}
+.cols{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:12px;min-width:1160px}
+.col{background:#EEF1EF;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:200px}
+.colh{display:flex;flex-direction:column;gap:4px;padding:4px 4px 6px}
+.colh .t{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.owner{align-self:flex-start;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px}
+.owner.in-house{background:#DCEBE5;color:#1F5A4C}.owner.external{background:#F3E4D6;color:#7A3B10}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.card.stopped{background:#F2F5FD;border-color:#C9D3F2}.card.failed{border-color:#E9C3BD}.card.slow{border:2px solid var(--red)}
+.card .top{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.card .name{all:unset;cursor:pointer;font-weight:700}
+.card .name:focus-visible{outline:2px solid var(--teal)}
+.bar{display:flex;gap:3px}.bar span{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.bar .d{background:var(--done)}.bar .n{background:var(--now)}
+.st{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:12.5px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(57,255,136,.75)}70%{box-shadow:0 0 0 9px rgba(57,255,136,0)}100%{box-shadow:0 0 0 0 rgba(57,255,136,0)}}
+.live{animation:ring 1.6s ease-out infinite}
+@media (prefers-reduced-motion:reduce){.live{animation:none}}
+.muted{color:var(--quiet);font-size:12px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px 12px;border-top:1px solid #EEF1EF;vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--quiet);border-top:0}
+.thread{list-style:none;margin:0;padding:0;display:flex;gap:8px;position:relative}
+.thread li{flex:1 1 0;min-width:110px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.circ{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700}
+.circ.d{background:var(--done);color:#fff}.circ.n{background:#fff;border:4px solid var(--now)}.circ.x{background:#fff;border:2px solid #C9D1CD}.circ.f{background:#fff;border:3px solid var(--red);color:var(--red)}
+.flag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--ink);color:#fff}
+.err{color:#8E2A20}
+dialog{border:0;border-radius:14px;padding:0;max-width:min(980px,96vw);width:100%}
+dialog::backdrop{background:rgba(15,23,20,.45)}
+.dlg{padding:22px;display:flex;flex-direction:column;gap:14px;max-height:88vh;overflow:auto}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;font:inherit;font-size:13px;padding:8px 10px;border:0;background:#fff;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff;font-weight:600}
+pre{white-space:pre-wrap;font:12.5px/1.55 ui-monospace,Menlo,monospace;background:#F5F6F3;border-radius:8px;padding:10px;margin:0;max-height:260px;overflow:auto}
+.toast{position:fixed;right:16px;bottom:16px;background:var(--ink);color:#fff;padding:10px 14px;border-radius:10px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+<nav aria-label="Main">
+  <p class="brand">Kitab External Runs</p>
+  <p class="sub">8 languages</p>
+  <button data-view="runs" aria-current="page">Runs</button>
+  <button data-view="new">New run</button>
+  <p class="group">Stages</p>
+  <button data-view="narratable">1 · Narratable text</button>
+  <button data-view="owners">Who runs each stage</button>
+</nav>
+<main id="main"></main>
+</div>
+<dialog id="dlg"><div class="dlg" id="dlgbody"></div></dialog>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const STAGES = ["narratable","speakable","audio"];
+const PLACES = ["queued","narratable","speakable","audio","delivered"];
+let view = "runs", lang = "", selected = new Set(), lastBoard = null;
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ago = t => { if(!t) return ""; const s = Math.max(0, Date.now()/1000 - t); return s < 90 ? Math.round(s)+" s" : Math.round(s/60)+" min"; };
+async function api(path, opts={}) {
+  const r = await fetch(path, {headers:{"Content-Type":"application/json"}, ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { toast(j.detail || ("Error " + r.status)); throw new Error(j.detail); }
+  return j;
+}
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(t._h); t._h=setTimeout(()=>t.hidden=true,3500); }
+
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  view = b.dataset.view;
+  document.querySelectorAll("nav button").forEach(x => x === b ? x.setAttribute("aria-current", "page") : x.removeAttribute("aria-current"));
+  render();
+});
+
+function progress(b){
+  const at = b.stage === "queued" ? -1 : b.stage === "delivered" ? 3 : STAGES.indexOf(b.stage);
+  const doneUpTo = b.stage === "delivered" ? 3 : (b.status === "stopped" ? at + 1 : at);
+  return '<div class="bar" aria-hidden="true">' + [0,1,2,3].map(i => `<span class="${i < doneUpTo ? "d" : (i === at && b.status === "running") ? "n" : ""}"></span>`).join("") + "</div>";
+}
+function stateLine(b){
+  if (b.stage === "delivered") return '<span class="st" style="color:#1F5A4C">Audio delivered</span>';
+  if (b.stage === "queued") return '<span class="st" style="color:#5A6662">In line</span>';
+  return {running:'<span class="st" style="color:#1F5A4C"><span class="dot live" style="background:#18C964"></span>Running · '+ago(b.stage_started)+'</span>',
+          waiting:'<span class="st" style="color:#7A5200"><span class="dot" style="background:#E0A526"></span>Waiting its turn</span>',
+          stopped:'<span class="st" style="color:#2D4485"><span class="dot" style="background:#2F5BD8"></span>Stopped here, as asked</span>',
+          failed:'<span class="st" style="color:#8E2A20"><span class="dot" style="background:#B23A2E"></span>Failed</span>'}[b.status] || b.status;
+}
+function card(b, slowIds){
+  const cls = ["card", b.status, slowIds.has(b.id) ? "slow" : ""].join(" ");
+  const nextLabel = b.stage === "narratable" ? "speakable" : "audio";
+  return `<div class="${cls}">
+    <div class="top"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-sel="${b.id}" ${selected.has(b.id)?"checked":""} aria-label="Select ${esc(b.title||b.linear_id)}">
+      <button class="name" data-open="${b.id}">${esc(b.title || b.linear_id)}</button></label><span class="muted">${esc(b.language)}</span></div>
+    ${progress(b)}
+    <div>${stateLine(b)}</div>
+    <div class="muted">${esc(b.linear_id)} · until ${esc(b.until)}${b.attempt>1?" · attempt "+b.attempt:""}</div>
+    ${b.error ? `<div class="err" style="font-size:12px">${esc(b.error)}</div>` : ""}
+    ${b.status==="stopped" && b.stage!=="audio" ? `<button class="btn primary" data-cont="${b.id}" style="align-self:flex-start">Continue to ${nextLabel}</button>` : ""}
+    ${b.status==="failed" ? `<button class="btn" data-rerun="${b.id}" style="align-self:flex-start">Run this stage again</button>` : ""}
+  </div>`;
+}
+
+async function renderRuns(){
+  const data = await api("/api/board" + (lang ? "?language=" + lang : ""));
+  lastBoard = data;
+  const all = Object.values(data.columns).flat();
+  const ids = new Set(all.map(b => b.id)); [...selected].forEach(i => { if (!ids.has(i)) selected.delete(i); });
+  const slow = new Set(data.warnings.filter(w => w.book_id && w.level !== "info").map(w => w.book_id));
+  const stoppedIds = all.filter(b => b.status === "stopped" && b.stage !== "audio").map(b => b.id);
+  const col = p => {
+    const books = data.columns[p] || [];
+    const own = STAGES.includes(p) ? `<span class="owner ${data.owners[p]}">${data.owners[p] === "in-house" ? "In-house" : "External"}${p !== "narratable" ? " · 1 at a time" : ""}</span>` : `<span class="muted">${p === "queued" ? "Anyone can queue; waits for stage 1" : "Checks and listening come later"}</span>`;
+    const stopped = books.filter(b => b.status === "stopped" && p !== "audio").map(b => b.id);
+    return `<section class="col" aria-label="${esc(data.labels[p])}"><div class="colh"><div class="t"><span>${esc(data.labels[p])}</span><span class="muted">${books.length}</span></div>${own}
+      ${stopped.length ? `<button class="btn" data-contall="${stopped.join(",")}" style="align-self:flex-start;font-size:12px;padding:4px 8px">Continue all stopped (${stopped.length}) →</button>` : ""}</div>
+      ${books.map(b => card(b, slow)).join("") || '<p class="muted" style="margin:4px">Nothing here</p>'}</section>`;
+  };
+  $("#main").innerHTML = `
+    <div class="row" style="justify-content:space-between"><div><h1>Runs</h1><p class="lede">Every book in a run, by stage. Each run goes only as far as asked; a stopped book can be continued from its card, a whole column, or any selection.</p></div>
+      <div class="row"><label>Language <select id="lang"><option value="">All</option>${["marathi","tamil","telugu","bengali","gujarati","kannada","malayalam","odia","english","hindi"].map(l => `<option ${l===lang?"selected":""}>${l}</option>`).join("")}</select></label>
+      <button class="btn primary" id="gonew">New run</button></div></div>
+    ${data.warnings.length ? `<div class="now"><b>Now</b>${data.warnings.map(w => `<div><span class="pill ${w.level}">${w.level==="red"?"Alert":w.level==="amber"?"Slow":"Note"}</span>${esc(w.text)}</div>`).join("")}</div>` : ""}
+    <div class="bulk" ${selected.size ? "" : "hidden"}><b>${selected.size} selected</b>
+      <span style="font-size:13px;color:#B9C4C0">Select: <button class="lnk" id="selstopped">all stopped (${stoppedIds.length})</button> · <button class="lnk" id="selnone">none</button></span>
+      <span style="flex:1"></span>
+      <button class="btn go" id="bcont">Continue each to its next stage</button>
+      <label style="font-size:13px">Run until <select id="buntil"><option value="">…</option>${STAGES.map(s => `<option>${s}</option>`).join("")}</select></label>
+      <button class="btn danger" id="bremove">Take out of the run</button></div>
+    <div class="board"><div class="cols">${PLACES.map(col).join("")}</div></div>`;
+  $("#lang").onchange = e => { lang = e.target.value; render(); };
+  $("#gonew").onclick = () => $('nav button[data-view="new"]').click();
+  $("#main").querySelectorAll("[data-sel]").forEach(c => c.onchange = () => { c.checked ? selected.add(+c.dataset.sel) : selected.delete(+c.dataset.sel); render(); });
+  $("#main").querySelectorAll("[data-open]").forEach(b => b.onclick = () => openBook(+b.dataset.open));
+  $("#main").querySelectorAll("[data-cont]").forEach(b => b.onclick = async () => { await api("/api/books/continue", {method:"POST", body:{ids:[+b.dataset.cont]}}); render(); });
+  $("#main").querySelectorAll("[data-contall]").forEach(b => b.onclick = async () => { await api("/api/books/continue", {method:"POST", body:{ids:b.dataset.contall.split(",").map(Number)}}); render(); });
+  $("#main").querySelectorAll("[data-rerun]").forEach(b => b.onclick = async () => { await api(`/api/books/${b.dataset.rerun}/rerun`, {method:"POST"}); render(); });
+  const bar = $(".bulk");
+  if (bar && !bar.hidden) {
+    $("#selstopped").onclick = () => { stoppedIds.forEach(i => selected.add(i)); render(); };
+    $("#selnone").onclick = () => { selected.clear(); render(); };
+    $("#bcont").onclick = async () => { const r = await api("/api/books/continue", {method:"POST", body:{ids:[...selected]}}); toast(`${r.moved.length} moved on${r.skipped.length ? `, ${r.skipped.length} not stopped so left as they are` : ""}`); selected.clear(); render(); };
+    $("#buntil").onchange = async e => { if (!e.target.value) return; await api("/api/books/until", {method:"POST", body:{ids:[...selected], until:e.target.value}}); toast("Run until changed"); render(); };
+    $("#bremove").onclick = async () => { if (!confirm(`Take ${selected.size} book(s) out of the run?`)) return; await api("/api/books/remove", {method:"POST", body:{ids:[...selected]}}); selected.clear(); render(); };
+  }
+}
+
+async function openBook(id){
+  const {book:b, events:ev, labels} = await api("/api/books/" + id);
+  const at = b.stage === "queued" ? -1 : b.stage === "delivered" ? 3 : STAGES.indexOf(b.stage);
+  const steps = ["queued", ...STAGES, "delivered"].map((p, i) => {
+    const k = i - 1; // stage index
+    let c = "x", sym = "";
+    if (p === "queued") { c = "d"; sym = "✓"; }
+    else if (p === "delivered") { if (b.stage === "delivered") { c = "d"; sym = "✓"; } }
+    else if (k < at || (k === at && b.status === "stopped") || b.stage === "delivered") { c = "d"; sym = "✓"; }
+    else if (k === at && b.status === "running") c = "n live";
+    else if (k === at && b.status === "failed") { c = "f"; sym = "!"; }
+    const fin = ev.filter(e => e.stage === p && (e.kind === "finished" || e.kind === "failed")).pop();
+    const sub = p === "queued" ? new Date(b.created_at*1000).toLocaleTimeString() : fin ? (fin.kind === "failed" ? "failed" : fin.detail.seconds + " s") : (k === at ? b.status : "");
+    return `<li><span class="circ ${c}" aria-hidden="true">${sym}</span><b>${esc(labels[p])}</b><span class="muted">${esc(sub)}</span>${p === b.until ? '<span class="flag">Run until here</span>' : ""}</li>`;
+  }).join("");
+  const narr = b.narratable, spk = b.speakable, rep = b.report;
+  const fixes = ev.filter(e => e.kind === "finished" && e.stage === "narratable").flatMap(e => e.detail.fixes || []);
+  const warns = ev.filter(e => e.kind === "finished" && e.stage === "narratable").flatMap(e => e.detail.warnings || []);
+  $("#dlgbody").innerHTML = `
+    <div class="row" style="justify-content:space-between"><div><h1 style="font-size:22px">${esc(b.title || b.linear_id)} · ${esc(b.language)}</h1>
+      <p class="muted" style="font-size:13px">${esc(b.linear_id)} · attempt ${b.attempt} · run until ${esc(b.until)} · queued by ${esc(b.created_by)}</p></div>
+      <button class="btn" id="dclose">Close</button></div>
+    <ol class="thread" aria-label="Stages">${steps}</ol>
+    ${b.error ? `<p class="err">${esc(b.error)}</p>` : ""}
+    <div class="panel"><b>Run until</b><div class="seg" role="group">${STAGES.map(s => `<button data-until="${s}" aria-pressed="${s===b.until}">${s}</button>`).join("")}</div>
+      <div class="row">
+        <button class="btn primary" id="dcont" ${b.status==="stopped" && b.stage!=="audio" ? "" : "disabled"}>Continue to the next stage</button>
+        <button class="btn" id="drerun" ${["failed","stopped"].includes(b.status) && STAGES.includes(b.stage) ? "" : "disabled"}>Run this stage again</button>
+        <button class="btn danger" id="dremove" ${b.status==="running" ? "disabled" : ""}>Take out of the run</button></div></div>
+    ${narr ? `<div class="panel"><b>1 · Narratable text</b>${fixes.length ? `<div>${fixes.map(f => `<div>Fixed ${esc(f.what)} (chapter ${f.chapter}): “${esc(f.before)}” → “${esc(f.after)}”</div>`).join("")}</div>` : ""}${warns.map(w => `<div class="muted">${esc(w)}</div>`).join("")}<pre>${esc(narr.text)}</pre></div>` : ""}
+    ${spk ? `<div class="panel"><b>2 · Speakable text</b>${spk.stub ? '<span class="muted">from the stand-in adapter, not a real result</span>' : ""}<pre>${esc(spk.chapters.map(c => c.heading + "\n" + c.text).join("\n\n"))}</pre></div>` : ""}
+    ${b.audio_path ? `<div class="panel"><b>3 · Audio</b><audio controls preload="none" src="/files/${esc(b.audio_path)}" style="width:100%"></audio><code class="muted">${esc(b.audio_path)}</code>${rep ? `<span class="muted">${rep.duration_s} s · ${esc(rep.model)}${rep.chapters ? " · " + rep.chapters.length + " chapters" : ""}</span>` : ""}</div>` : ""}
+    <div class="panel"><b>History</b><table><tbody>${ev.map(e => `<tr><td class="muted">${new Date(e.at*1000).toLocaleTimeString()}</td><td>${esc(e.kind.replace("_"," "))}${e.stage ? " · " + esc(e.stage) : ""}</td><td class="muted">${esc(e.actor)}${e.detail.reasons ? " · " + esc(e.detail.reasons.join(" ")) : ""}${e.detail.until ? " · until " + esc(e.detail.until) : ""}</td></tr>`).join("")}</tbody></table></div>`;
+  const dlg = $("#dlg"); if (!dlg.open) dlg.showModal();
+  $("#dclose").onclick = () => dlg.close();
+  $("#dlgbody").querySelectorAll("[data-until]").forEach(x => x.onclick = async () => { await api("/api/books/until", {method:"POST", body:{ids:[id], until:x.dataset.until}}); openBook(id); render(); });
+  $("#dcont").onclick = async () => { await api("/api/books/continue", {method:"POST", body:{ids:[id]}}); openBook(id); render(); };
+  $("#drerun").onclick = async () => { await api(`/api/books/${id}/rerun`, {method:"POST"}); openBook(id); render(); };
+  $("#dremove").onclick = async () => { if (!confirm("Take this book out of the run?")) return; await api("/api/books/remove", {method:"POST", body:{ids:[id]}}); dlg.close(); render(); };
+}
+
+let newLang = "marathi", newUntil = "audio", picks = new Set();
+async function renderNew(){
+  const books = await api("/api/eligible?language=" + newLang);
+  $("#main").innerHTML = `<h1>New run</h1><p class="lede">Anyone can queue books. Pick them, say how far the run should go, and add them to Runs.</p>
+    <div class="row" style="align-items:flex-start;gap:16px">
+    <div class="panel" style="flex:3 1 480px"><div class="row" style="justify-content:space-between"><b>1 · Pick books</b>
+      <label>Language <select id="nl">${["marathi","tamil","telugu","bengali","gujarati","kannada","malayalam","odia","english","hindi"].map(l => `<option ${l===newLang?"selected":""}>${l}</option>`).join("")}</select></label></div>
+      <table><thead><tr><th>Book</th><th>State</th></tr></thead><tbody>${books.map(b => `<tr><td><label style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-pick="${esc(b.linear_id)}" ${b.in_run?"disabled":""} ${picks.has(b.linear_id)?"checked":""}><span><b>${esc(b.title)}</b><br><span class="muted">${esc(b.linear_id)}</span></span></label></td><td class="${b.in_run?"muted":""}">${b.in_run ? "Already in a run" : "Can be queued"}</td></tr>`).join("") || '<tr><td colspan="2" class="muted">No books in this language.</td></tr>'}</tbody></table></div>
+    <div class="panel" style="flex:2 1 320px"><b>2 · Run until</b>
+      ${[["narratable","Until narratable text","Stage 1 only: check the text before anything else runs."],["speakable","Until speakable text","Stages 1–2: test the speakable text without spending voice time."],["audio","Until audio","Stages 1–3, ending with audio delivered."]].map(([v,t,d]) => `<label style="display:flex;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px"><input type="radio" name="u" value="${v}" ${v===newUntil?"checked":""}><span><b>${t}</b><br><span class="muted">${d}</span></span></label>`).join("")}
+      <button class="btn primary" id="nadd" ${picks.size?"":"disabled"}>Add ${picks.size} book${picks.size===1?"":"s"} to Runs</button></div></div>`;
+  $("#nl").onchange = e => { newLang = e.target.value; picks.clear(); render(); };
+  $("#main").querySelectorAll("[data-pick]").forEach(c => c.onchange = () => { c.checked ? picks.add(c.dataset.pick) : picks.delete(c.dataset.pick); render(); });
+  $("#main").querySelectorAll('input[name="u"]').forEach(r => r.onchange = () => newUntil = r.value);
+  $("#nadd").onclick = async () => {
+    const items = books.filter(b => picks.has(b.linear_id)).map(b => ({linear_id:b.linear_id, language:newLang, title:b.title}));
+    await api("/api/runs", {method:"POST", body:{items, until:newUntil}}); picks.clear(); toast(`${items.length} book(s) added`); $('nav button[data-view="runs"]').click();
+  };
+}
+
+async function renderNarratable(){
+  const data = await api("/api/board");
+  const books = Object.values(data.columns).flat().filter(b => b.stage !== "queued" || b.status === "failed");
+  $("#main").innerHTML = `<p class="muted" style="font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)">Stage 1 · runs ${data.owners.narratable} today</p><h1>Narratable text</h1>
+    <p class="lede">Raw summary → narratable text: SOP Appendix A spoken lines in the book's language, headings set to the standard, body text unchanged. Open a book to see its text and any heading fixes.</p>
+    <div class="panel"><table><thead><tr><th>Book</th><th>Where it is</th><th>Note</th></tr></thead><tbody>${books.map(b => `<tr><td><button class="btn" data-open="${b.id}">${esc(b.title||b.linear_id)} · ${esc(b.language)}</button></td><td>${esc(data.labels[b.stage])} · ${esc(b.status)}</td><td class="${b.error?"err":"muted"}">${esc(b.error || "")}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">No books have reached stage 1 yet.</td></tr>'}</tbody></table></div>`;
+  $("#main").querySelectorAll("[data-open]").forEach(b => b.onclick = () => openBook(+b.dataset.open));
+}
+
+async function renderOwners(){
+  const d = await api("/api/owners");
+  $("#main").innerHTML = `<h1>Who runs each stage</h1><p class="lede">The stages are the same whoever does the work. Switching a stage affects books that haven't reached it yet.</p>
+    <div class="panel"><table><thead><tr><th>Stage</th><th>Runs where</th><th>At once</th><th>Usual time</th></tr></thead><tbody>${STAGES.map((s,i) => `<tr><td><b>${i+1} · ${s}</b></td><td><div class="seg" role="group" style="max-width:240px">${["in-house","external"].map(o => `<button data-stage="${s}" data-owner="${o}" aria-pressed="${d.owners[s]===o}">${o}</button>`).join("")}</div></td><td>${d.limits[s]}</td><td>${d.usual_seconds[s] ? Math.round(d.usual_seconds[s]) + " s" : "—"}</td></tr>`).join("")}</tbody></table></div>`;
+  $("#main").querySelectorAll("[data-owner]").forEach(b => b.onclick = async () => { await api("/api/owners", {method:"PUT", body:{stage:b.dataset.stage, owner:b.dataset.owner}}); render(); });
+}
+
+async function render(){
+  try { await ({runs:renderRuns, new:renderNew, narratable:renderNarratable, owners:renderOwners}[view])(); } catch (e) { console.error(e); }
+}
+render();
+setInterval(() => { if (view === "runs" && !$("#dlg").open && !document.activeElement?.matches("select")) render(); }, 2500);
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+{
+ "source": "Audio Experience V2 SOP, Appendix A (ClickUp doc 14yq6g2hbc8-11336), read 2026-11-20",
+ "lines": {
+  "english": {
+   "what_you_take_away": {
+    "text": "What You'll Take Away?",
+    "status": "Approved"
+   },
+   "key_idea": {
+    "text": "Key Idea N of M: <title>",
+    "status": "Approved"
+   },
+   "conclusion": {
+    "text": "Conclusion",
+    "status": "Approved"
+   },
+   "title_by_author": {
+    "text": "<title> by <author>.",
+    "status": "Approved"
+   }
+  },
+  "hindi": {
+   "what_you_take_away": {
+    "text": "आप क्या सीखेंगे?",
+    "status": "Approved"
+   },
+   "key_idea": {
+    "text": "मुख्य विचार M में से N: <title>",
+    "status": "Approved"
+   },
+   "conclusion": {
+    "text": "निष्कर्ष",
+    "status": "Approved"
+   },
+   "title_by_author": {
+    "text": "<title>, <author>।",
+    "status": "Draft"
+   }
+  },
+  "marathi": {
+   "what_you_take_away": {
+    "text": "तुम्ही काय शिकाल?",
+    "status": "Draft"
+   },
+   "key_idea": {
+    "text": "मुख्य कल्पना M पैकी N: <title>",
+    "status": "Draft"
+   },
+   "conclusion": {
+    "text": "निष्कर्ष",
+    "status": "Draft"
+   },
+   "title_by_author": null
+  },
+  "gujarati": {
+   "what_you_take_away": {
+    "text": "તમે શું શીખશો?",
+    "status": "Draft"
+   },
+   "key_idea": {
+    "text": "મુખ્ય વિચાર M માંથી N: <title>",
+    "status": "Draft"
+   },
+   "conclusion": {
+    "text": "નિષ્કર્ષ",
+    "status": "Draft"
+   },
+   "title_by_author": null
+  },
+  "bengali": {
+   "what_you_take_away": {
+    "text": "আপনি কী শিখবেন?",
+    "status": "Draft"
+   },
+   "key_idea": {
+    "text": "মূল ধারণা M-এর মধ্যে N: <title>",
+    "status": "Draft"
+   },
+   "conclusion": {
+    "text": "উপসংহার",
+    "status": "Draft"
+   },
+   "title_by_author": null
+  },
+  "odia": {
+   "what_you_take_away": {
+    "text": "ଆପଣ କ'ଣ ଶିଖିବେ?",
+    "status": "Draft"
+   },
+   "key_idea": {
+    "text": "ମୁଖ୍ୟ ଧାରଣା M ମଧ୍ୟରୁ N: <title>",
+    "status": "Draft"
+   },
+   "conclusion": {
+    "text": "ଉପସଂହାର",
+    "status": "Draft"
+   },
+   "title_by_author": null
+  },
+  "tamil": {
+   "what_you_take_away": {
+    "text": "நீங்கள் என்ன கற்றுக்கொள்வீர்கள்?",
+    "status": "Draft"
+   },
+   "key_idea": {
+    "text": "முக்கியக் கருத்து M-இல் N: <title>",
+    "status": "Draft"
+   },
+   "conclusion": {
+    "text": "முடிவுரை",
+    "status": "Draft"
+   },
+   "title_by_author": null
+  },
+  "telugu": {
+   "what_you_take_away": {
+    "text": "మీరు ఏమి నేర్చుకుంటారు?",
+    "status": "Draft"
+   },
+   "key_idea": {
+    "text": "ముఖ్య ఆలోచన M లో N: <title>",
+    "status": "Draft"
+   },
+   "conclusion": {
+    "text": "ముగింపు",
+    "status": "Draft"
+   },
+   "title_by_author": null
+  },
+  "kannada": {
+   "what_you_take_away": {
+    "text": "ನೀವು ಏನು ಕಲಿಯುತ್ತೀರಿ?",
+    "status": "Draft"
+   },
+   "key_idea": {
+    "text": "ಪ್ರಮುಖ ವಿಚಾರ M ರಲ್ಲಿ N: <title>",
+    "status": "Draft"
+   },
+   "conclusion": {
+    "text": "ಉಪಸಂಹಾರ",
+    "status": "Draft"
+   },
+   "title_by_author": null
+  },
+  "malayalam": {
+   "what_you_take_away": {
+    "text": "നിങ്ങൾ എന്ത് പഠിക്കും?",
+    "status": "Draft"
+   },
+   "key_idea": {
+    "text": "പ്രധാന ആശയം M-ൽ N: <title>",
+    "status": "Draft"
+   },
+   "conclusion": {
+    "text": "ഉപസംഹാരം",
+    "status": "Draft"
+   },
+   "title_by_author": null
+  }
+ }
+}
