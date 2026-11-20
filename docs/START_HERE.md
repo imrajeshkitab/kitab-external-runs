@@ -21,17 +21,26 @@ the narratable text, the speakable text and the audio.
 
 ### Test summaries
 
-`fixtures/test_summaries.json` holds test books in exactly the shape of our summaries table (every column: id,
-linear_id, language, title, author, category, final_summary, summary_chapters, is_ready, speakable_* …). They are
-copies of real summaries, marked `[TEST]`, `source: "test"`:
+Two test books live in our **Studio database** (`content.summaries`), next to the real summaries, so every Content
+API endpoint serves them like any other book (`GET /languages/{language}/summaries`, `/summaries/feed`,
+`/generation-input/...`). They are copies of real summaries, marked `[TEST]` in the title, `source = 'test'`,
+negative ids (the CMS sync only adds or updates by id, so it never touches them), and each has a narrator with a
+reference clip in every language:
 
 | Book | Languages | Why it's there |
 |---|---|---|
 | TEST-0001 | bengali, gujarati, kannada, malayalam, marathi, odia, tamil, telugu | passes stage 1 in all 8 languages: use it for every dry run |
 | TEST-0002 | marathi, telugu | its intro has no heading (no tagline), so stage 1 blocks it on purpose: shows what a blocked book looks like |
 
-To use our real summaries instead, set `KITAB_CONTENT_API` and `KITAB_CONTENT_API_KEY` (your existing key) before
-starting the server.
+To read them (and the real summaries) from the Content API, start the server with your existing key:
+
+```bash
+KITAB_CONTENT_API=https://kitab-content-api.vercel.app KITAB_CONTENT_API_KEY=<your key> \
+.venv/bin/uvicorn extruns.api:app --port 8790
+```
+
+Without those two settings the server works offline from `fixtures/test_summaries.json`: the same TEST rows, exactly
+as stored in the table, every column included.
 
 ## 2. How a book flows
 

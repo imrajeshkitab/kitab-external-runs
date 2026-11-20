@@ -52,7 +52,7 @@ class ContentApiSource:
             return r.read()
 
     def books(self, language: str) -> list[dict]:
-        data = json.loads(self._get(f"/languages/{language}/summaries", ready="true", limit=1000))
+        data = json.loads(self._get(f"/languages/{language}/summaries", limit=1000))
         items = data.get("items", data) if isinstance(data, dict) else data
         return [{"linear_id": b["linear_id"], "language": language, "title": b.get("title", "")} for b in items]
 
