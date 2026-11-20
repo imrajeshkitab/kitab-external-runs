@@ -25,6 +25,8 @@ Design: [pipeline design](https://claude.ai/artifact/VkNcH8tBZW1x1daFympQ5b) ·
 [runner proposal](https://claude.ai/artifact/AbuiDZ5Z7CfzeZwHsZLMJE) ·
 [screens](https://claude.ai/artifact/T7fcP6nbL28EmDtEyiL936).
 
+**Using an AI coding tool?** It should read [CLAUDE.md](CLAUDE.md) first (foundation overview: flow, integration points, rules; not final).
+
 **External side, start here:** [docs/START_HERE.md](docs/START_HERE.md): setup, the flow, where to plug in your two steps (functions or HTTP endpoints), test summaries, dry run, API reference.
 
 ## Run it locally
