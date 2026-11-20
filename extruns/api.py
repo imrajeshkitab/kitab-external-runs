@@ -150,7 +150,13 @@ class Fail(BaseModel):
 @app.post("/api/runner/claim")
 def r_claim(body: Claim, x_runner_key: str | None = Header(None)):
     _runner(x_runner_key)
-    return {"book": _ok(engine.claim, body.stage, body.worker, "external")}
+    book = _ok(engine.claim, body.stage, body.worker, "external")
+    if book and body.stage == "audio" and hasattr(SOURCE, "voice_for"):
+        try:
+            book["voice"] = SOURCE.voice_for(book["linear_id"], book["language"])
+        except Exception as exc:  # noqa: BLE001 - the job still goes out; the adapter sees voice=None and the reason
+            book["voice"], book["voice_error"] = None, f"{type(exc).__name__}: {exc}"
+    return {"book": book}
 
 
 @app.post("/api/runner/{book_id}/heartbeat")

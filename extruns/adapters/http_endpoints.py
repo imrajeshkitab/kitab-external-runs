@@ -11,6 +11,7 @@ and returns:
 
 Your synthesise endpoint receives (POST, JSON):
     {"book_id": 18, "linear_id": "TEST-0001", "language": "marathi", "attempt": 1,
+     "voice": {"voice_id", "name", ..., "reference": {"language", "text", "seconds", "audio_url"}},
      "chapters": [{"index": 0, "kind": "intro", "heading": "...", "text": "..."}, ...]}
 and returns ONE of:
     {"audio_base64": "<the file, base64>", "ext": "mp3", "report": {...}}
@@ -50,7 +51,7 @@ def normalise(job: dict) -> dict:
 def synthesise(job: dict, out_dir: Path) -> dict:
     out = _post(os.environ["SYNTHESISE_URL"],
                 {"book_id": job["id"], "linear_id": job["linear_id"], "language": job["language"],
-                 "attempt": job["attempt"], "chapters": job["speakable"]["chapters"]},
+                 "attempt": job["attempt"], "voice": job.get("voice"), "chapters": job["speakable"]["chapters"]},
                 float(os.environ.get("SYNTHESISE_TIMEOUT", "7200")))
     ext = out.get("ext", "mp3")
     out_dir.mkdir(parents=True, exist_ok=True)

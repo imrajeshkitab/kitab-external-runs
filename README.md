@@ -43,7 +43,8 @@ With no settings it reads sample summaries from `fixtures/summaries.json` and ke
 
 | Variable | Meaning |
 |---|---|
-| `KITAB_CONTENT_API`, `KITAB_CONTENT_API_KEY` | read real summaries from the Content API instead of the fixtures |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | read summaries, narrators and reference clips straight from the Studio Supabase (put them in `.env`; see `.env.example`) |
+| `KITAB_CONTENT_API`, `KITAB_CONTENT_API_KEY` | optional: read via the hosted Content API instead (only when `SUPABASE_URL` is empty) |
 | `EXTRUNS_RUNNER_KEY` | shared key the runner sends as `X-Runner-Key` (default `dev-runner-key`, local only) |
 | `KITAB_RUNS_URL` | where the runner finds the server |
 | `EXTRUNS_PROVIDER` | provider name in paths and file names (default `bala`) |

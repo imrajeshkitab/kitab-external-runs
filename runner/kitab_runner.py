@@ -21,6 +21,19 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+def _load_env(path: Path) -> None:
+    """Same .env as the server (if the runner runs from this repo); values are never printed."""
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                v = v.strip().strip('"').strip("'")
+                if v:
+                    os.environ.setdefault(k.strip(), v)
+
+
+_load_env(Path(__file__).resolve().parents[1] / ".env")
 URL = os.environ.get("KITAB_RUNS_URL", "http://localhost:8790").rstrip("/")
 KEY = os.environ.get("EXTRUNS_RUNNER_KEY", "dev-runner-key")
 WORKER = f"{socket.gethostname()}-{os.getpid()}"

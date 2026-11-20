@@ -1,7 +1,9 @@
-"""Where summaries come from. Both return the Content API feed's shape (see narratable.py).
+"""Where summaries (and, for the audio stage, the narrator and reference clip) come from.
 
-FixtureSource reads fixtures/summaries.json (local runs and tests). ContentApiSource reads the live Content API
-(GET /summaries/feed); its base URL and key come from the environment, never from this file.
+SupabaseSource   the Studio Supabase directly, over HTTPS (default when SUPABASE_URL is set). No Vercel involved.
+ContentApiSource the hosted Content API (optional; only when KITAB_CONTENT_API is set and SUPABASE_URL is not).
+FixtureSource    fixtures/*.json, offline.
+All return the Content API feed's shape (see narratable.py). Keys come from the environment / .env, never from code.
 """
 from __future__ import annotations
 
@@ -66,5 +68,68 @@ class ContentApiSource:
         return None
 
 
+class SupabaseSource:
+    """Reads content.summaries, studio.book_voices, studio.voices and studio.voice_references through Supabase's
+    REST API, and signs reference clips from the Storage bucket "studio". Read-only."""
+
+    BUCKET = "studio"
+
+    def __init__(self):
+        self.url = os.environ["SUPABASE_URL"].rstrip("/")
+        self.key = os.environ["SUPABASE_SERVICE_KEY"]
+
+    def _rest(self, schema: str, table: str, **params) -> list[dict]:
+        url = f"{self.url}/rest/v1/{table}?{urllib.parse.urlencode(params)}"
+        req = urllib.request.Request(url, headers={"apikey": self.key, "Authorization": f"Bearer {self.key}",
+                                                   "Accept-Profile": schema})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read())
+
+    def books(self, language: str) -> list[dict]:
+        rows = self._rest("content", "summaries", select="linear_id,language,title", language=f"eq.{language}",
+                          order="linear_id")
+        return [{"linear_id": r["linear_id"], "language": r["language"], "title": r["title"] or ""} for r in rows]
+
+    def get(self, linear_id: str, language: str) -> dict | None:
+        rows = self._rest("content", "summaries", select="linear_id,language,title,author,category,final_summary",
+                          linear_id=f"eq.{linear_id}", language=f"eq.{language}")
+        if not rows:
+            return None
+        s = rows[0]
+        other = language not in ("english", "hindi")
+        return {**s, "author": s.get("author") or "",
+                "sections": [x.to_dict() for x in split_sections(s.get("final_summary") or "", other)]}
+
+    def _sign(self, path: str, seconds: int = 24 * 3600) -> str:
+        req = urllib.request.Request(f"{self.url}/storage/v1/object/sign/{self.BUCKET}/{path}",
+                                     data=json.dumps({"expiresIn": seconds}).encode(), method="POST",
+                                     headers={"apikey": self.key, "Authorization": f"Bearer {self.key}",
+                                              "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return f"{self.url}/storage/v1{json.loads(r.read())['signedURL']}"
+
+    def voice_for(self, linear_id: str, language: str) -> dict | None:
+        """The book's narrator and their reference clip in this language (Hindi as fallback), as the Content API's
+        generation-input gives them. None when no narrator is assigned."""
+        bv = self._rest("studio", "book_voices", select="voice_id,reason", linear_id=f"eq.{linear_id}")
+        if not bv:
+            return None
+        vid = bv[0]["voice_id"]
+        v = (self._rest("studio", "voices", select="voice_id,name,gender,age,pace,status", voice_id=f"eq.{vid}") or [{}])[0]
+        refs = self._rest("studio", "voice_references", select="language,text,audio_path,seconds,sample_rate,is_default",
+                          voice_id=f"eq.{vid}", language=f"in.({language},hindi)", order="is_default.desc")
+        ref = next((r for r in refs if r["language"] == language), None) or next(iter(refs), None)
+        out = {"voice_id": vid, "name": v.get("name"), "gender": v.get("gender"), "age": v.get("age"),
+               "pace": v.get("pace"), "why_this_voice": bv[0].get("reason")}
+        if ref:
+            out["reference"] = {"language": ref["language"], "text": ref["text"], "seconds": ref["seconds"],
+                                "sample_rate": ref["sample_rate"], "audio_url": self._sign(ref["audio_path"])}
+        return out
+
+
 def default_source():
-    return ContentApiSource() if os.environ.get("KITAB_CONTENT_API") else FixtureSource()
+    if os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_KEY"):
+        return SupabaseSource()
+    if os.environ.get("KITAB_CONTENT_API"):
+        return ContentApiSource()
+    return FixtureSource()

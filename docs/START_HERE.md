@@ -11,11 +11,17 @@ Needs Python 3.10 or newer (tested on 3.10 and 3.13) and git. Works on macOS and
 ```bash
 git clone git@github.com:imrajeshkitab/kitab-external-runs.git && cd kitab-external-runs
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env          # then fill in SUPABASE_SERVICE_KEY (shared with you separately) and EXTRUNS_RUNNER_KEY
 
 .venv/bin/uvicorn extruns.api:app --port 8790        # 1) server + UI → http://localhost:8790
 .venv/bin/python runner/kitab_runner.py              # 2) runner, in a second terminal (stand-in steps for now)
 .venv/bin/python -m pytest -q                        # 3) tests (should all pass)
 ```
+
+Everything runs on your machine. The server reads summaries, narrators and reference clips **directly from
+Kitab's Studio Supabase** over HTTPS (the settings in `.env`); no hosted Kitab service (Vercel or other) is
+involved, and audio never leaves your machine except where you send it. Without a `.env` the server still runs,
+offline, from the test file.
 
 Then in the UI: **New run** → language → tick **TEST - …** (TEST-0001) → *Until audio* → **Add**. Watch the book move
 across **Runs**: stage 1 runs on the server, stages 2–3 in the runner. Open the card to see the stage thread,
@@ -23,9 +29,8 @@ the narratable text, the speakable text and the audio.
 
 ### Test summaries
 
-Two test books live in our **Studio database** (`content.summaries`), next to the real summaries, so every Content
-API endpoint serves them like any other book (`GET /languages/{language}/summaries`, `/summaries/feed`,
-`/generation-input/...`). They are copies of real summaries, marked `TEST - ` in the title, `source = 'test'`,
+Two test books live in our **Studio database** (`content.summaries`), next to the real summaries, so this app reads
+them like any other book (and so does the Content API). They are copies of real summaries, marked `TEST - ` in the title, `source = 'test'`,
 negative ids (the CMS sync only adds or updates by id, so it never touches them), and each has a narrator with a
 reference clip in every language:
 
@@ -34,15 +39,9 @@ reference clip in every language:
 | TEST-0001 | bengali, gujarati, kannada, malayalam, marathi, odia, tamil, telugu | passes stage 1 in all 8 languages: use it for every dry run |
 | TEST-0002 | marathi, telugu | its intro has no heading (no tagline), so stage 1 blocks it on purpose: shows what a blocked book looks like |
 
-To read them (and the real summaries) from the Content API, start the server with your existing key:
-
-```bash
-KITAB_CONTENT_API=https://kitab-content-api.vercel.app KITAB_CONTENT_API_KEY=<your key> \
-.venv/bin/uvicorn extruns.api:app --port 8790
-```
-
-Without those two settings the server works offline from `fixtures/test_summaries.json`: the same TEST rows, exactly
-as stored in the table, every column included.
+With `.env` filled in, the server reads them (and the real summaries) straight from the Studio Supabase.
+Without it, it works offline from `fixtures/test_summaries.json`: the same TEST rows, exactly as stored, every
+column included.
 
 ## 2. How a book flows
 
@@ -68,7 +67,7 @@ flowchart LR
 | 1 · Narratable text | Kitab code, runs inside the server | the summary as written | chapters with SOP spoken lines and standard headings; fixes logged; blocked books get a reason |
 | 2 · Speakable text | **you**: `normalise(job)` | narratable chapters | the same chapters with numbers, symbols and emojis as words |
 | Kitab checks | server, on arrival | your speakable chapters | pass, or *failed* with plain reasons (section 6) |
-| 3 · Audio | **you**: `synthesise(job, out_dir)` | speakable chapters (+ narrator and clip) | one audio file + report (duration, model, chapter times) |
+| 3 · Audio | **you**: `synthesise(job, out_dir)` | speakable chapters + `job["voice"]` (narrator and a signed link to their reference clip in this language) | one audio file + report (duration, model, chapter times) |
 | Delivered | server | the upload | saved as `external/bala/<book>/<language>/attempt-<n>/…` |
 
 A stopped book goes on with **Continue** (its card, a whole column, or a selection). Who runs each stage is a
@@ -205,8 +204,9 @@ stage isn't yours right now). Otherwise:
 For `"stage": "audio"`, `speakable` holds the chapters you sent back in stage 2.
 
 Fields you'll use: `id`, `language`, `narratable.chapters` (stage 2), `speakable.chapters` (stage 3), `attempt`.
-Narrator and reference clip: read them from the Content API's `GET /generation-input/{linear_id}/{language}`, as
-today.
+For `"stage": "audio"` the book also carries `voice`: the narrator (`voice_id`, `name`, `gender`, `age`,
+`pace`) and `reference` (`language`, `text`, `seconds`, `sample_rate`, `audio_url` = a signed link valid 24 hours).
+No other call is needed.
 
 ### Heartbeat
 

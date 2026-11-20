@@ -36,9 +36,9 @@ Words used everywhere:
 ```
               Kitab (this server)                          External (the runner + partner code)
  ┌──────────────────────────────────────────┐   ┌─────────────────────────────────────────────┐
- │ Summary source                           │   │                                             │
- │  Content API (Studio DB content.summaries│   │                                             │
- │  incl. TEST-0001/0002) or fixtures/*.json│   │                                             │
+ │ Summary source (Studio Supabase, direct) │   │                                             │
+ │  content.summaries incl. TEST-0001/0002, │   │                                             │
+ │  or fixtures/*.json offline              │   │                                             │
  │            │                             │   │                                             │
  │ Queued  (POST /api/runs, until=...)      │   │                                             │
  │            ▼                             │   │                                             │
@@ -114,7 +114,7 @@ def normalise(job) -> dict:
 
 def synthesise(job, out_dir) -> dict:
     # in:  job["speakable"]["chapters"], job["language"], job["linear_id"], job["attempt"]
-    #      narrator + reference clip: Content API GET /generation-input/{linear_id}/{language}
+    #      job["voice"]: narrator + reference clip (signed audio_url) in this language, added by the server
     # out: {"audio_path": str, "ext": "mp3", "report": {"duration_s": float, "model": str,
     #       "chapters": [{"index","start_s","end_s"}], "sentences": [...optional...]}}
 ```
@@ -135,7 +135,7 @@ speakable checks' thresholds. Keep those changes inside the adapters, `engine.cl
 | `extruns/parsing.py` | splits summary Markdown into intro / key ideas / conclusion (vendored from kitab-tts-engine) | summary format changes |
 | `extruns/checks.py` | checks on speakable text and audio delivery | partner output changes |
 | `extruns/naming.py` | storage paths and file names | naming changes |
-| `extruns/sources.py` | where summaries come from: Content API or `fixtures/*.json` | new source |
+| `extruns/sources.py` | where summaries, narrator and clip come from: Studio Supabase directly (`.env`), the hosted Content API (optional) or `fixtures/*.json` | new source |
 | `extruns/adapters/` | `stub.py` (stand-in), `my_adapters_template.py`, `http_endpoints.py` | **partner integration** |
 | `extruns/config.py` | limits, lease, owners default, provider name, env vars | tuning |
 | `extruns/api.py` | FastAPI: people's API, runner API, UI, in-house worker loop | new endpoints |
@@ -156,8 +156,9 @@ speakable checks' thresholds. Keep those changes inside the adapters, `engine.cl
 5. Speakable text keeps the narratable structure (chapters, kinds, order, headings). Checks run on every arrival,
    whoever made it.
 6. Files are named by `naming.py`. A redo is a new attempt, never an overwrite.
-7. Secrets only come from the environment (`EXTRUNS_RUNNER_KEY`, `KITAB_CONTENT_API_KEY`). Never commit keys or
-   `.env`, never print them.
+7. Secrets only come from the environment or `.env` (`SUPABASE_SERVICE_KEY`, `EXTRUNS_RUNNER_KEY`). Never commit
+   keys or `.env`, never print them.
+9. Local runs depend on no hosted Kitab service: reads go straight to Supabase, files stay on the machine.
 8. Kitab's English/Hindi pipeline and Audio Studio are separate; this repo doesn't write to them.
 
 ## 6. Run and test
@@ -166,14 +167,14 @@ Python 3.10+ (tested on 3.10 and 3.13).
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env                                   # SUPABASE_SERVICE_KEY, EXTRUNS_RUNNER_KEY
 .venv/bin/uvicorn extruns.api:app --port 8790          # server + UI, http://localhost:8790
 .venv/bin/python runner/kitab_runner.py                # runner (stand-in adapters by default)
 .venv/bin/python -m pytest -q                          # 17 tests
 ```
 
 Test books: **TEST-0001** (8 languages, passes stage 1) and **TEST-0002** (Marathi, Telugu, blocked on purpose).
-They're in the Studio DB, served by the Content API (set `KITAB_CONTENT_API` and `KITAB_CONTENT_API_KEY`), and
-mirrored in `fixtures/test_summaries.json` for offline runs. A quick dry run: New run → TEST-0001 → Marathi →
+They're in the Studio DB (read directly with `.env`), and mirrored in `fixtures/test_summaries.json` for offline runs. A quick dry run: New run → TEST-0001 → Marathi →
 *until speakable* → check the card → *Continue to audio*.
 
 ## 7. Good first questions to ask about this repo

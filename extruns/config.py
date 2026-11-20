@@ -5,6 +5,23 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_env(path: Path) -> None:
+    """KEY=value lines from .env into the environment (without overriding what is already set). Values are never
+    printed or logged."""
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            v = v.strip().strip('"').strip("'")
+            if v:                                   # an empty value in .env means "not set"
+                os.environ.setdefault(k.strip(), v)
+
+
+_load_env(ROOT / ".env")
 DB_PATH = Path(os.environ.get("EXTRUNS_DB", ROOT / "storage" / "extruns.sqlite3"))
 STORAGE = Path(os.environ.get("EXTRUNS_STORAGE", ROOT / "storage" / "files"))
 RUNNER_KEY = os.environ.get("EXTRUNS_RUNNER_KEY", "dev-runner-key")   # set a real one outside local dev

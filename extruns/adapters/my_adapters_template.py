@@ -35,7 +35,8 @@ def synthesise(job: dict, out_dir: Path) -> dict:
 
     job["speakable"]["chapters"]    what normalise() returned (after Kitab's checks passed)
     job["language"], job["linear_id"], job["attempt"]
-    Narrator and reference clip: GET /generation-input/{linear_id}/{language} on the Content API (as today).
+    job["voice"]                    narrator {voice_id, name, gender, age, pace} and reference {language, text,
+                                    seconds, sample_rate, audio_url (signed, 24 h)}: clone the voice from this clip
 
     Write the file inside out_dir (the runner uploads it and Kitab names it). Any format; say which in "ext".
     """
