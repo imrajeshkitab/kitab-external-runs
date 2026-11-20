@@ -57,7 +57,7 @@ class ContentApiSource:
         return [{"linear_id": b["linear_id"], "language": language, "title": b.get("title", "")} for b in items]
 
     def get(self, linear_id: str, language: str) -> dict | None:
-        raw = self._get("/summaries/feed", language=language, linear_ids=linear_id, text="false")
+        raw = self._get("/summaries/feed", language=language, linear_ids=linear_id, text="false", ready="false")
         for line in raw.decode("utf-8").splitlines():
             if line.strip():
                 s = json.loads(line)

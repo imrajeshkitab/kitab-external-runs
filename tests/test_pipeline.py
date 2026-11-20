@@ -225,3 +225,16 @@ def test_test_book_passes_speakable_checks_in_all_languages():
         n = narratable.build(FixtureSource().get("TEST-0001", lang))
         s = stub.normalise({"language": lang, "narratable": n})
         assert checks.speakable(n, s, lang) == [], lang
+
+
+def test_content_api_source_asks_for_all_rows(monkeypatch):
+    """The 8-language rows (and the TEST books) are not on the API's 'ready' list, so the source must ask for all."""
+    from extruns import sources
+    monkeypatch.setenv("KITAB_CONTENT_API", "https://example.invalid")
+    monkeypatch.setenv("KITAB_CONTENT_API_KEY", "k")
+    seen = []
+    src = sources.ContentApiSource()
+    monkeypatch.setattr(src, "_get", lambda path, **p: seen.append((path, p)) or
+                        (b'{"items": []}' if "languages" in path else b""))
+    src.books("tamil"); src.get("TEST-0001", "tamil")
+    assert "ready" not in seen[0][1] and seen[1][1]["ready"] == "false"
