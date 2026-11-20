@@ -11,7 +11,7 @@ from extruns import config, db, engine, naming, narratable  # noqa: E402
 from extruns.adapters import stub  # noqa: E402
 from extruns.sources import FixtureSource  # noqa: E402
 
-SRC = FixtureSource()
+SRC = FixtureSource(ROOT / "tests" / "fixtures" / "sample_summaries.json")
 stub.STEP_SECONDS = 0
 
 
@@ -209,3 +209,19 @@ def test_test_summaries_cover_all_columns_and_languages():
         narratable.build(FixtureSource().get("TEST-0001", lang))          # every language passes stage 1
     with pytest.raises(narratable.Blocked):
         narratable.build(FixtureSource().get("TEST-0002", "marathi"))     # blocked on purpose
+
+
+def test_removed_book_number_is_never_reused():
+    a = add("SUM-199")
+    engine.remove([a], "test")
+    b = add("SUM-511")
+    assert b != a and not [e for e in engine.events(b) if e["kind"] == "removed"]
+
+
+def test_test_book_passes_speakable_checks_in_all_languages():
+    """A correct normaliser (here the stand-in) must pass our checks on TEST-0001 in every language."""
+    from extruns import checks
+    for lang in ("bengali", "gujarati", "kannada", "malayalam", "marathi", "odia", "tamil", "telugu"):
+        n = narratable.build(FixtureSource().get("TEST-0001", lang))
+        s = stub.normalise({"language": lang, "narratable": n})
+        assert checks.speakable(n, s, lang) == [], lang

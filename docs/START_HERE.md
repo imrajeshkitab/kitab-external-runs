@@ -6,6 +6,8 @@ repo and run the server, the UI and the runner yourself.
 
 ## 1. Set up and run (10 minutes)
 
+Needs Python 3.10 or newer (tested on 3.10 and 3.13) and git. Works on macOS and Linux.
+
 ```bash
 git clone git@github.com:imrajeshkitab/kitab-external-runs.git && cd kitab-external-runs
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
@@ -15,7 +17,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m pytest -q                        # 3) tests (should all pass)
 ```
 
-Then in the UI: **New run** → language → tick **[TEST] …** (TEST-0001) → *Until audio* → **Add**. Watch the book move
+Then in the UI: **New run** → language → tick **TEST - …** (TEST-0001) → *Until audio* → **Add**. Watch the book move
 across **Runs**: stage 1 runs on the server, stages 2–3 in the runner. Open the card to see the stage thread,
 the narratable text, the speakable text and the audio.
 
@@ -23,7 +25,7 @@ the narratable text, the speakable text and the audio.
 
 Two test books live in our **Studio database** (`content.summaries`), next to the real summaries, so every Content
 API endpoint serves them like any other book (`GET /languages/{language}/summaries`, `/summaries/feed`,
-`/generation-input/...`). They are copies of real summaries, marked `[TEST]` in the title, `source = 'test'`,
+`/generation-input/...`). They are copies of real summaries, marked `TEST - ` in the title, `source = 'test'`,
 negative ids (the CMS sync only adds or updates by id, so it never touches them), and each has a narrator with a
 reference clip in every language:
 

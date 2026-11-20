@@ -12,7 +12,7 @@ from . import config
 
 SCHEMA = """
 create table if not exists books (
-  id            integer primary key,
+  id            integer primary key autoincrement,
   linear_id     text not null,
   language      text not null,
   title         text not null default '',
@@ -36,7 +36,7 @@ create table if not exists books (
 );
 create index if not exists books_place on books(stage, status, position);
 create table if not exists events (
-  id       integer primary key,
+  id       integer primary key autoincrement,
   book_id  integer not null,
   at       real not null,
   actor    text not null,                      -- in-house | external | person name/id
